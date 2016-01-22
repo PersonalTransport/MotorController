@@ -1,0 +1,10 @@
+#define dV 1
+
+void linear_interpolate() {
+    if(target <= current) {
+        current = target;
+    }
+    else {
+        current += dV;
+    }
+}
