@@ -8,7 +8,7 @@
 	
 	list p=18F1220 
 	radix hex
-	config WDT=OFF, LVP=OFF 
+	config WDT=OFF, LVP=OFF,OSC=HS
 
 ARG0 equ 0x80
 ARG1 equ 0x81
@@ -16,6 +16,8 @@ ARG2 equ 0x82
  
 #define current CCPR1L
 #define target	0x83
+#define index	0x84
+#define index1	0x85
 
 #include p18f1220.inc 
 	org	0x00
@@ -26,6 +28,9 @@ ARG2 equ 0x82
 
 	org 0x20
 start:	
+	MOVLW	0xCF  ;; Clock at 4MHz
+	MOVWF	OSCCON
+	
 	CLRF	PORTA  
 	CLRF	PORTB 
 	; INITIALIZATION
@@ -52,8 +57,9 @@ start:
 	; PWM Initialization using TOSC = 32 us, PWM on P1A (pin 18)
 	; 2) PWMperiod = (PR2 + 1) * 4 * TOSC * (TMR2 Prescale)
 	; = (99 + 1) * 4 * 32 us * 4 = 51 msec
-	MOVLW	99 ; TODO the file's radix is hex should this be 0x63	 HEREHEREHEREHEREHEREHEREHEREHEREHEREHERE					
-	MOVWF	PR2
+	; MOVLW	0x63;99 ; TODO the file's radix is hex should this be 0x63	 HEREHEREHEREHEREHEREHEREHEREHEREHEREHERE					
+	; MOVWF	PR2
+	SETF	PR2
 	; 3) Set PWM Mode
 	MOVLW	0x00C ; "0000 1100?
 	MOVWF	CCP1CON ; PWM output on P1A (Pin 18)
@@ -63,19 +69,43 @@ start:
 	; Set to (51 ms/(4*32)=398) >>2 or 0x63 or 99 for 100% power
 	; 5) Clear and Configure Timer 2 (PWM requires Timer 2)
 	CLRF	TMR2 ; Timer 2 Register
-	MOVLW	0x05 ; Enable timer and set prescale to 4
+	
+	MOVLW	0x07 ; Enable timer and set prescale to 16
 	MOVWF	T2CON
 	BCF	PIR1, TMR2IF ; Clear Timer 2 flag 
 		
 	BSF	ADCON0,GO
 	
 	CLRF	target
+	
+	MOVLW	0xFF
+	MOVWF	index
+	
+	MOVLW	0x00
+	MOVWF	index1
 loop:
 	MOVFF target, ARG0
 	NOP ; TODO is this nop needed?
 	CALL	linear_interpolate
+inner_loop:
+	
+inner_loop1:
+	INCF	index1
+	BNOV	inner_loop1
+	CLRF	index1
+	BRA inner_loop
+	
+	INCF	index
+	BNOV	inner_loop
+	MOVLW	0xFF
+	MOVWF	index
 	BRA	loop
 	
+	;INCF	index
+	;BNOV	inner_loop
+	;MOVLW	0xFF
+	;MOVWF	index
+	;BRA loop
 
 ; A copy of target is used in linear_interpolate
 ; as to make sure things go boom!
