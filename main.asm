@@ -8,17 +8,17 @@
 	
 	list p=18F1220 
 	radix hex
-	config WDT=OFF, LVP=OFF,OSC=HS
-
-ARG0 equ 0x80
-ARG1 equ 0x81
-ARG2 equ 0x82
- 
-#define current CCPR1L
-#define target	0x83
-#define index	0x84
-#define index1	0x85
-
+	config WDT=OFF, LVP=OFF
+	
+; these are just used for some fake stack-ish space for functions.
+#define ARG0	0x80
+#define ARG1	0x81
+#define ARG2	0x82
+#define ARG3	0x83
+#define ARG4	0x84
+#define target	0x85
+	
+	
 #include p18f1220.inc 
 	org	0x00
 	GOTO	start
@@ -28,11 +28,9 @@ ARG2 equ 0x82
 
 	org 0x20
 start:	
-	MOVLW	0xCF  ;; Clock at 4MHz
-	MOVWF	OSCCON
 	
 	CLRF	PORTA  
-	CLRF	PORTB 
+	CLRF	PORTB
 	; INITIALIZATION
 	; 1) Use default voltage, Select analog input to AN0 (Pin 1), Disable A/D initially
 	MOVLW	0x00 ; ?00 0 000 0 0?
@@ -54,87 +52,157 @@ start:
 	MOVLW	0x00
 	MOVWF	TRISB
 	
-	; PWM Initialization using TOSC = 32 us, PWM on P1A (pin 18)
-	; 2) PWMperiod = (PR2 + 1) * 4 * TOSC * (TMR2 Prescale)
-	; = (99 + 1) * 4 * 32 us * 4 = 51 msec
-	; MOVLW	0x63;99 ; TODO the file's radix is hex should this be 0x63	 HEREHEREHEREHEREHEREHEREHEREHEREHEREHERE					
-	; MOVWF	PR2
-	SETF	PR2
-	; 3) Set PWM Mode
-	MOVLW	0x00C ; "0000 1100?
-	MOVWF	CCP1CON ; PWM output on P1A (Pin 18)
-	; 4) PWMdutyCycle = (CCPR1L:CCP1CON<5:4>)*TOSC*(TMR2 Prescale)
-	; = (CCPR1L:11)* 32 * 4 us where CCPR1L control high value.
-	CLRF	CCPR1L ; Set the duty cycle to 0 for 0% power
-	; Set to (51 ms/(4*32)=398) >>2 or 0x63 or 99 for 100% power
-	; 5) Clear and Configure Timer 2 (PWM requires Timer 2)
-	CLRF	TMR2 ; Timer 2 Register
+	; PWM setup
+	; Set CCPR1L:CCP1CON<5:4> to  0x000 for 0% power
+	; Set CCPR1L:CCP1CON<5:4> to  0xFF3 for 100% power.
+	; But you should use the function ( write_pwm ) that I wrote.
 	
-	MOVLW	0x07 ; Enable timer and set prescale to 16
+	; Setup the PWM frequency
+	MOVLW	0xFF
+	MOVWF	PR2 ; Use the full range of timer2.
+	
+	; Clear and Configure Timer 2 (PWM requires Timer 2)
+	CLRF	TMR2 ; Timer 2 Register
+	MOVLW	0x04 ; Enable timer and set prescale to 1.
 	MOVWF	T2CON
-	BCF	PIR1, TMR2IF ; Clear Timer 2 flag 
+	BCF	PIR1, TMR2IF ; Clear Timer 2 interrupt flag .
+	
+	MOVLW	0x00C	
+	MOVWF	CCP1CON ; PWM mode; P1A (Pin 18), P1C active-high; P1B, P1D active-high.
+	
+	; Set the duty cycle to 0x000 i.e 0%
+	CLRF	ARG1
+	CLRF	ARG0
+	CALL	write_pwm
 		
-	BSF	ADCON0,GO
+	BSF	ADCON0, GO ; Start the A/D conversion
 	
 	CLRF	target
+main:
+	BCF	PIE1,ADIE ; Disable A/D interrupt TODO should this disable all interrupt to be safe
 	
-	MOVLW	0xFF
-	MOVWF	index
-	
-	MOVLW	0x00
-	MOVWF	index1
-loop:
-	MOVFF target, ARG0
-	NOP ; TODO is this nop needed?
+	MOVFF	target, ARG0 ; Copy the target value to ARG0
 	CALL	linear_interpolate
-inner_loop:
 	
-inner_loop1:
-	INCF	index1
-	BNOV	inner_loop1
-	CLRF	index1
-	BRA inner_loop
+	BSF	PIE1,	ADIE ; Enable A/D interrupt
 	
-	INCF	index
-	BNOV	inner_loop
-	MOVLW	0xFF
-	MOVWF	index
-	BRA	loop
+	CLRF	ARG0
+	CLRF	ARG1
+	CALL    delay ; delay 66.56ms 
 	
-	;INCF	index
-	;BNOV	inner_loop
-	;MOVLW	0xFF
-	;MOVWF	index
-	;BRA loop
+	CLRF	ARG0
+	CLRF	ARG1
+	CALL    delay ; delay 66.56ms
+	
+	CLRF	ARG0
+	CLRF	ARG1
+	CALL    delay ; delay 66.56ms
+	
+	CLRF	ARG0
+	CLRF	ARG1
+	CALL    delay ; delay 66.56ms
+	
+	; that is a delay of .26624s is that enough?
+	BRA main
 
-; A copy of target is used in linear_interpolate
-; as to make sure things go boom!
-; i.e. this function is reentrant.
-; void linear_interpolate(uint8_t target);
-; NOTE check with Nick to make sure my logic is correct!
+
+
+; Linear interpolates increasing CCPR1L by one
+; until CCPR1L = ARG0.
+; if ARG0 is less than CCPR1L then CCPR1L is set
+; to ARG0
+;
+; This function will add one to CCPR1L with
+; each invocation, therfore you must keep calling
+; it until CCPR1L = ARG0 or if ARG0 is continuously
+; changing just keep calling this function. 
+;
+; TODO make this function interpolate the full 10-bits 
+; of the (CCPR1L:CCP1CON<5:4>)
 linear_interpolate:
 ; target_less_equal_current:
 	MOVF	ARG0, W
-	SUBWF	current, W
+	SUBWF	CCPR1L, W
 	BTFSS	STATUS, 0
 	BRA	target_greater_current
-	MOVFF	ARG0, current
+	MOVFF	ARG0, CCPR1L
 	NOP ; TODO is this nop needed?
-	RETURN	0
+	RETURN
+	
 target_greater_current:
-	INCF    current
-	RETURN	0
+	INCF    CCPR1L
+	RETURN
 
 	
 PW_adjustment:
-
 	MOVFF	ADRESH, target
 	
 	BCF	PIR1, ADIF ; clear flag
 	BSF	ADCON0, GO   ; start next conversion
+	
 	RETFIE
 	
+; Sets the full 10-bit PWM duty cycle.
+; The function take 2 arguments.
+; ARG1	    the most significant byte for the duty cycle.
+; ARG0	    the lest significant byte for the duty cycle.
+; 
+; 
+; Set ARG1|ARG0 to  0x0000 for 0% power.
+; Set ARG1|ARG0 to  0x03FF for 100% power.
+	
+; void(ARG1, ARG0)
+write_pwm:	
+	; Transfer bits 0,1	
+	MOVLW	0xCF
+	ANDWF	CCP1CON, F ; clear first
+	
+	MOVLW	0x03
+	ANDWF	ARG0, W
+	RRNCF	WREG, W
+	RRNCF	WREG, W
+	RRNCF	WREG, W
+	RRNCF	WREG, W
+	IORWF	CCP1CON, F
+	
+	; Transfer bits 2-8
+	MOVLW	0xC0
+	ANDWF	CCPR1L, F ; clear first
+	
+	MOVLW	0xFC
+	ANDWF	ARG0, W
+	RRNCF	WREG, W	
+	RRNCF	WREG, W
+	IORWF	CCPR1L, F
+
+	
+	; Transfer bits 9,10
+	MOVLW	0x3F
+	ANDWF	CCPR1L, F ; clear first
+	
+	MOVLW	0x03
+	ANDWF	ARG1, W
+	RRNCF	WREG, W	
+	RRNCF	WREG, W
+	IORWF	CCPR1L, F
+	
+	RETURN
+	
+; Just Do (255-ARG0)*(255-ARG1) loops to kill time
+; arg0 arg1 
+delay:
+	MOVFF	ARG0, ARG2
+delay_loop:
+	INCF	ARG2
+	BC	delay_return
+    
+	MOVFF	ARG1, ARG3
+delay_inner_loop:
+	INCF	ARG3
+	BC	delay_loop
+	BRA	delay_inner_loop
+	
+delay_return:
+	RETURN
+	
 	end
-
-
-
