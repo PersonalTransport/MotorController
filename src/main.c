@@ -122,17 +122,6 @@ void initPWM()
     OC1CON1bits.OCM = 0b110;
 }
 
-void percentDutyCycle(unsigned long int value)
-{
-    if (value > 0 && value <= 0xFFFF) {
-        OC1R = value;
-    } else if (value > 0xFFFF) {
-        OC1R = 0xFFFF;
-    } else {
-        OC1R = 0;
-    }
-}
-
 void initTmr2PWM()
 {
     T2CONbits.TCS = 0b0; //Timer2 Clock Source is Internal the clock (FOSC/2)
@@ -146,19 +135,15 @@ void initTmr2PWM()
     T2CONbits.TON = 0b1; //Turning timer2 on
 }
 
-unsigned long int value = 0;
-
 void __attribute__((interrupt, auto_psv)) _ADC1Interrupt()
 {
-    value = ((unsigned long)ADC1BUF0);
-    if (value > 350) {
-        value -= 350;
-    } else {
+    int32_t value = (((int32_t)ADC1BUF0) - 350) * 145;
+    if (value < 0)
         value = 0;
-    }
-    value *= 145;
+    else if (value > 0xFFFF)
+        value = 0xFFFF;
 
-    percentDutyCycle(value);
+    OC1R = value;
 
     resetADC(); //reset interrupt flag
 }
