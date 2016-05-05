@@ -34,9 +34,9 @@
 #pragma config GCP = OFF // General Segment Code Protect (Code protection is disabled)
 #pragma config JTAGEN = OFF // JTAG Port Enable (JTAG port is disabled)
 
-#include <xc.h>
 #include <libpic30.h>
 #include <motor_controller.h>
+#include <xc.h>
 
 void resetADC();
 void initADC();
@@ -50,7 +50,7 @@ static l_bool configuration_ok = false;
 int main()
 {
     TRISB = 0x0000;
-    TRISA = 0x0001; 
+    TRISA = 0x0001;
     // Initialize the LIN interface
     if (l_sys_init())
         return -1;
@@ -64,63 +64,56 @@ int main()
     struct l_irqmask irqmask = { 5, 5 };
     l_sys_irq_restore(irqmask);
 
-    /*l_u16 configuration_timeout = 1000;
-    do {
-        if (l_ifc_read_status_UART1() & (1 << 6)) {
-            configuration_ok = true;
-            break;
-        }
-        __delay_ms(5);
-        configuration_timeout--;
-    } while (configuration_timeout || !configuration_ok);*/
-    
-    __builtin_write_OSCCONL(OSCCON & ~(1<<6));
+    __builtin_write_OSCCONL(OSCCON & ~(1 << 6));
     RPOR7bits.RP14R = 18; //setting pin RP15 to output OC1(PWM)
-    __builtin_write_OSCCONL(OSCCON | (1<<6));
-    
+    __builtin_write_OSCCONL(OSCCON | (1 << 6));
+
     initPWM();
     initTmr2PWM();
-    
+
     initADC(); //initiates ADC
     resetADC(); //resets interrupt flag and enable bit
     AD1CON1bits.ADON = 0b1; //Turn ADC on
-    
+
     while (1) {
         if (l_ifc_read_status_UART1() & (1 << 6))
             configuration_ok = true;
     }
 }
 
-void initADC() {
+void initADC()
+{
     AD1CON1bits.FORM = 0b00; //Data output format as 0000 00dd dddd dddd
     AD1CON1bits.SSRC = 0b111; //Internal counter ends sampling and starts conversion (auto-convert)
     AD1CON1bits.ASAM = 0b1; //Sampling begins immediately after last conversion completes; SAMP bit is auto-set
-    
+
     AD1CON2bits.VCFG = 0b000; //Voltage Reference as Vdd (3.3V) and Vss (GND)
     AD1CON2bits.CSCNA = 0b0; //Does not scan inputs
     AD1CON2bits.SMPI = 0b000; //Interrupts at the completion of conversion for each 16th sample/convert sequence
     AD1CON2bits.BUFM = 0b0; //Buffer configured as one 16-word buffer(ADC1BUFn<15:0>)
     AD1CON2bits.ALTS = 0b0; //Always uses MUX A input multiplexer settings
-    
+
     AD1CON3bits.ADRC = 0b1; //A/D internal RC clock
     AD1CON3bits.SAMC = 0b11111; //31 ? TAD
     AD1CON3bits.ADCS = 0b00111111; //64 ? TCY
-    
+
     IPC3bits.AD1IP = 0b111; //Interrupt is Priority 7 (highest priority interrupt)
-    
+
     AD1CHSbits.CH0SA = 0b0; //Channel 0 positive input is AN0
-    
-    AD1PCFGbits.PCFG0 = 0b0; //AN0-Pin is configured in Analog mode; I/O port read is disabled, A/D samples pin voltage 
-    
+
+    AD1PCFGbits.PCFG0 = 0b0; //AN0-Pin is configured in Analog mode; I/O port read is disabled, A/D samples pin voltage
+
     AD1CON1bits.SAMP = 0b1; //Start sampling
 }
 
-void resetADC() {
+void resetADC()
+{
     IFS0bits.AD1IF = 0b0; //clearing ADC interrupt flag
     IEC0bits.AD1IE = 0b1; //enabling ADC interrupt
 }
 
-void initPWM() {
+void initPWM()
+{
     OC1R = 0;
     OC1RS = 0;
     IC1CON2bits.SYNCSEL = 0x1F;
@@ -129,44 +122,45 @@ void initPWM() {
     OC1CON1bits.OCM = 0b110;
 }
 
-void percentDutyCycle(unsigned long int value) {
-    if(value > 0 && value <= 0xFFFF) {
+void percentDutyCycle(unsigned long int value)
+{
+    if (value > 0 && value <= 0xFFFF) {
         OC1R = value;
-    } else if(value > 0xFFFF) {
+    } else if (value > 0xFFFF) {
         OC1R = 0xFFFF;
-    }
-    else {
+    } else {
         OC1R = 0;
     }
 }
 
-void initTmr2PWM() {
+void initTmr2PWM()
+{
     T2CONbits.TCS = 0b0; //Timer2 Clock Source is Internal the clock (FOSC/2)
     T2CONbits.T32 = 0b0; //16 bit mode
     T2CONbits.TGATE = 0b0; //Gated time accumulation is disabled
     T2CONbits.TCKPS = 0b00; //Setting pre-scaler to 1
-    
+
     TMR2 = 0; //Clearing timer register
     PR2 = 0xFFFF; //Setting the frequency to 61 Hz
-    
+
     T2CONbits.TON = 0b1; //Turning timer2 on
 }
 
 unsigned long int value = 0;
 
-void __attribute__((__interrupt__, auto_psv)) _ADC1Interrupt() {
+void __attribute__((interrupt, auto_psv)) _ADC1Interrupt()
+{
     value = ((unsigned long)ADC1BUF0);
-    if(value > 350) {
+    if (value > 350) {
         value -= 350;
-    }
-    else {
+    } else {
         value = 0;
     }
     value *= 145;
-    
+
     percentDutyCycle(value);
-    
-    resetADC();//reset interrupt flag
+
+    resetADC(); //reset interrupt flag
 }
 
 void __attribute__((interrupt, no_auto_psv)) _U1TXInterrupt()
