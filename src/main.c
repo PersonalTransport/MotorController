@@ -145,6 +145,8 @@ void __attribute__((interrupt, auto_psv)) _ADC1Interrupt()
 
     OC1R = value;
 
+    l_u16_wr_motor_controller_duty_cycle(OC1R);
+
     resetADC(); //reset interrupt flag
 }
 
