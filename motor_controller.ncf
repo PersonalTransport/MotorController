@@ -1,0 +1,44 @@
+node_capability_file;
+LIN_language_version = "2.2";
+node motor_controller {
+	general {
+		LIN_protocol_version = "2.2";
+		supplier = 0x4854;
+		function = 0x6373;
+		variant  = 0;
+		bitrate = automatic min 10 kbps max 20 kbps;
+		sends_wake_up_signal = "no";
+	}
+	diagnostic {
+		NAD = 0x14;
+		diagnostic_class = 1;
+	}
+	frames {
+		publish motor_controller_status_frame {
+			length = 3;
+			signals {
+				motor_controller_igbt_temperature {
+					size = 10;
+					init_value = 0;
+					offset = 0;
+				}
+				motor_controller_duty_cycle {
+					size = 10;
+					init_value = 0;
+					offset = 10;
+				}
+				motor_controller_error_bit {
+					size = 1;
+					init_value = 0;
+					offset = 20;
+				}
+			}
+		}
+	}
+	encoding {
+
+	}
+	status_management {
+		response_error = motor_controller_error_bit;
+	}
+}

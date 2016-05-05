@@ -1,16 +1,5 @@
-# Cmake files
-CMakeCache.txt
-CMakeFiles
-CMakeScripts
-Makefile
-cmake_install.cmake
-install_manifest.txt
-
-# Compiled Object files
-*.slo
-*.lo
+# Object files
 *.o
-*.obj
 *.ko
 *.obj
 *.elf
@@ -19,21 +8,17 @@ install_manifest.txt
 *.gch
 *.pch
 
-# Compiled Dynamic libraries
-*.so
-*.dylib
-*.dll
-*.so.*
-
-# Fortran module files
-*.mod
-
-# Compiled Static libraries
-*.lai
-*.la
-*.a
+# Libraries
 *.lib
+*.a
+*.la
 *.lo
+
+# Shared objects (inc. Windows DLLs)
+*.dll
+*.so
+*.so.*
+*.dylib
 
 # Executables
 *.exe
@@ -46,11 +31,31 @@ install_manifest.txt
 # Debug files
 *.dSYM/
 
-# Clion IDE
-.idea
+# Generated
+gen/
+*-gen/
+generated/
+slaves/
 
-# MPLAB X
-*.X
+# CMake
+CMakeCache.txt
+CMakeFiles
+CMakeScripts
+#Makefile
+cmake_install.cmake
+install_manifest.txt
 
-# QtCreator
-CMakeLists.txt.user
+/bin/
+
+# Eclipse
+.classpath
+.project
+
+# IntelliJ
+.idea/
+*.iml
+
+/*.X/*
+!/*.X/Makefile
+!/*.X/nbproject/configurations.xml
+!/*.X/nbproject/project.xml
