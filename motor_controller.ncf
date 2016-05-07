@@ -20,12 +20,12 @@ node motor_controller {
 				motor_controller_duty_cycle {
 					size = 16;
 					init_value = 0;
-					offset = 10;
+					offset = 0;
 				}
 				motor_controller_igbt_temperature {
 					size = 10;
 					init_value = 0;
-					offset = 0;
+					offset = 16;
 				}
 				motor_controller_error_bit {
 					size = 1;

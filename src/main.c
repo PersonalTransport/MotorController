@@ -34,12 +34,10 @@
 #pragma config GCP = OFF // General Segment Code Protect (Code protection is disabled)
 #pragma config JTAGEN = OFF // JTAG Port Enable (JTAG port is disabled)
 
+#include <igbt_thermistor.h>
 #include <libpic30.h>
 #include <motor_controller.h>
 #include <xc.h>
-
-void resetADC();
-void initADC();
 
 void initPWM();
 void percentDutyCycle(unsigned long int value);
@@ -68,48 +66,42 @@ int main()
     RPOR7bits.RP14R = 18; //setting pin RP15 to output OC1(PWM)
     __builtin_write_OSCCONL(OSCCON | (1 << 6));
 
+    AD1PCFGLbits.PCFG0 = 0;
+    TRISAbits.TRISA0 = 1;
+
+    AD1PCFGLbits.PCFG11 = 0;
+    TRISBbits.TRISB13 = 1;
+
+    AD1CON2bits.VCFG = 0;
+    AD1CON3bits.ADCS = 0b00111111;
+
+    AD1CON1bits.SSRC = 0b111;
+    AD1CON3bits.SAMC = 0b11111;
+
+    AD1CON1bits.FORM = 0b00;
+    AD1CON2bits.SMPI = 0b0001;
+    AD1CON1bits.ASAM = 1;
+
+    AD1CON2bits.CSCNA = 1;
+    AD1CON2bits.ALTS = 0;
+    AD1CSSLbits.CSSL0 = 1;
+    AD1CSSLbits.CSSL11 = 1;
+
+    AD1CHSbits.CH0NA = 0;
+
+    AD1CON1bits.ADON = 1;
+
+    IFS0bits.AD1IF = 0;
+    IPC3bits.AD1IP = 6;
+    IEC0bits.AD1IE = 1;
+
     initPWM();
     initTmr2PWM();
-
-    initADC(); //initiates ADC
-    resetADC(); //resets interrupt flag and enable bit
-    AD1CON1bits.ADON = 0b1; //Turn ADC on
 
     while (1) {
         if (l_ifc_read_status_UART1() & (1 << 6))
             configuration_ok = true;
     }
-}
-
-void initADC()
-{
-    AD1CON1bits.FORM = 0b00; //Data output format as 0000 00dd dddd dddd
-    AD1CON1bits.SSRC = 0b111; //Internal counter ends sampling and starts conversion (auto-convert)
-    AD1CON1bits.ASAM = 0b1; //Sampling begins immediately after last conversion completes; SAMP bit is auto-set
-
-    AD1CON2bits.VCFG = 0b000; //Voltage Reference as Vdd (3.3V) and Vss (GND)
-    AD1CON2bits.CSCNA = 0b0; //Does not scan inputs
-    AD1CON2bits.SMPI = 0b000; //Interrupts at the completion of conversion for each 16th sample/convert sequence
-    AD1CON2bits.BUFM = 0b0; //Buffer configured as one 16-word buffer(ADC1BUFn<15:0>)
-    AD1CON2bits.ALTS = 0b0; //Always uses MUX A input multiplexer settings
-
-    AD1CON3bits.ADRC = 0b1; //A/D internal RC clock
-    AD1CON3bits.SAMC = 0b11111; //31 ? TAD
-    AD1CON3bits.ADCS = 0b00111111; //64 ? TCY
-
-    IPC3bits.AD1IP = 0b111; //Interrupt is Priority 7 (highest priority interrupt)
-
-    AD1CHSbits.CH0SA = 0b0; //Channel 0 positive input is AN0
-
-    AD1PCFGbits.PCFG0 = 0b0; //AN0-Pin is configured in Analog mode; I/O port read is disabled, A/D samples pin voltage
-
-    AD1CON1bits.SAMP = 0b1; //Start sampling
-}
-
-void resetADC()
-{
-    IFS0bits.AD1IF = 0b0; //clearing ADC interrupt flag
-    IEC0bits.AD1IE = 0b1; //enabling ADC interrupt
 }
 
 void initPWM()
@@ -137,17 +129,26 @@ void initTmr2PWM()
 
 void __attribute__((interrupt, auto_psv)) _ADC1Interrupt()
 {
-    int32_t value = (((int32_t)ADC1BUF0) - 350) * 145;
-    if (value < 0)
-        value = 0;
-    else if (value > 0xFFFF)
-        value = 0xFFFF;
+    if (IFS0bits.AD1IF) {
+        IFS0bits.AD1IF = 0;
+        int32_t value = (((int32_t)ADC1BUF0) - 350) * 145;
+        if (value < 0)
+            value = 0;
+        else if (value > 0xFFFF)
+            value = 0xFFFF;
 
-    OC1R = value;
+        OC1R = value;
 
-    l_u16_wr_motor_controller_duty_cycle(OC1R);
+        if (l_flg_tst_motor_controller_duty_cycle()) {
+            l_flg_clr_motor_controller_duty_cycle();
+            l_u16_wr_motor_controller_duty_cycle(value);
+        }
 
-    resetADC(); //reset interrupt flag
+        if (l_flg_tst_motor_controller_igbt_temperature()) {
+            l_flg_clr_motor_controller_igbt_temperature();
+            l_u16_wr_motor_controller_igbt_temperature(calculate_igbt_thermistor_temperature(ADC1BUF1));
+        }
+    }
 }
 
 void __attribute__((interrupt, no_auto_psv)) _U1TXInterrupt()
