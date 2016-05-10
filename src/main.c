@@ -47,8 +47,6 @@ static l_bool configuration_ok = false;
 
 int main()
 {
-    TRISB = 0x0000;
-    TRISA = 0x0001;
     // Initialize the LIN interface
     if (l_sys_init())
         return -1;
@@ -92,7 +90,7 @@ int main()
     AD1CON1bits.ADON = 1;
 
     IFS0bits.AD1IF = 0;
-    IPC3bits.AD1IP = 6;
+    IPC3bits.AD1IP = 4;
     IEC0bits.AD1IE = 1;
 
     initPWM();
