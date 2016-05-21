@@ -77,12 +77,13 @@ int main()
     AD1CON3bits.SAMC = 0b11111;
 
     AD1CON1bits.FORM = 0b00;
-    AD1CON2bits.SMPI = 0b0001;
+    AD1CON2bits.SMPI = 0b0010;
     AD1CON1bits.ASAM = 1;
 
     AD1CON2bits.CSCNA = 1;
     AD1CON2bits.ALTS = 0;
     AD1CSSLbits.CSSL0 = 1;
+    AD1CSSLbits.CSSL4 = 1;
     AD1CSSLbits.CSSL11 = 1;
 
     AD1CHSbits.CH0NA = 0;
@@ -134,17 +135,31 @@ void __attribute__((interrupt, auto_psv)) _ADC1Interrupt()
             value = 0;
         else if (value > 0xFFFF)
             value = 0xFFFF;
-
+        
         OC1R = value;
-
+        
+        l_u16 igbt1_temp = calculate_igbt_thermistor_temperature(ADC1BUF1);
+        l_u16 igbt2_temp = calculate_igbt_thermistor_temperature(ADC1BUF2);
+        int32_t igbt_temp_diff = ((int32_t) igbt1_temp) - ((int32_t) igbt2_temp);
+        igbt_temp_diff = (igbt_temp_diff < 0) ? -igbt_temp_diff : igbt_temp_diff;
+        
+        if(igbt1_temp >= 110 || igbt2_temp >= 110 || igbt_temp_diff > 50) {
+            OC1R = 0;
+        }
+        
         if (l_flg_tst_motor_controller_duty_cycle()) {
             l_flg_clr_motor_controller_duty_cycle();
             l_u16_wr_motor_controller_duty_cycle(value);
         }
 
-        if (l_flg_tst_motor_controller_igbt_temperature()) {
-            l_flg_clr_motor_controller_igbt_temperature();
-            l_u16_wr_motor_controller_igbt_temperature(calculate_igbt_thermistor_temperature(ADC1BUF1));
+        if (l_flg_tst_motor_controller_igbt1_temperature()) {
+            l_flg_clr_motor_controller_igbt1_temperature();
+            l_u16_wr_motor_controller_igbt1_temperature(igbt1_temp);
+        }
+        
+        if (l_flg_tst_motor_controller_igbt2_temperature()) {
+            l_flg_clr_motor_controller_igbt2_temperature();
+            l_u16_wr_motor_controller_igbt2_temperature(igbt2_temp);
         }
     }
 }
