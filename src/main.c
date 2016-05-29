@@ -40,7 +40,6 @@
 #include <xc.h>
 
 void initPWM();
-void percentDutyCycle(unsigned long int value);
 void initTmr2PWM();
 
 static l_bool configuration_ok = false;
@@ -61,11 +60,14 @@ int main()
     l_sys_irq_restore(irqmask);
 
     __builtin_write_OSCCONL(OSCCON & ~(1 << 6));
-    RPOR7bits.RP14R = 18; //setting pin RP15 to output OC1(PWM)
+    RPOR7bits.RP14R = 18; //setting pin RP14 to output OC1(PWM)
     __builtin_write_OSCCONL(OSCCON | (1 << 6));
 
     AD1PCFGLbits.PCFG0 = 0;
     TRISAbits.TRISA0 = 1;
+    
+    AD1PCFGLbits.PCFG4 = 0;
+    TRISBbits.TRISB2 = 1;
 
     AD1PCFGLbits.PCFG11 = 0;
     TRISBbits.TRISB13 = 1;
@@ -143,9 +145,9 @@ void __attribute__((interrupt, auto_psv)) _ADC1Interrupt()
         int32_t igbt_temp_diff = ((int32_t) igbt1_temp) - ((int32_t) igbt2_temp);
         igbt_temp_diff = (igbt_temp_diff < 0) ? -igbt_temp_diff : igbt_temp_diff;
         
-        if(igbt1_temp >= 110 || igbt2_temp >= 110 || igbt_temp_diff > 50) {
+        /*if(igbt1_temp >= 110 || igbt2_temp >= 110 || igbt_temp_diff > 50) {
             OC1R = 0;
-        }
+        }*/
         
         if (l_flg_tst_motor_controller_duty_cycle()) {
             l_flg_clr_motor_controller_duty_cycle();
@@ -164,7 +166,7 @@ void __attribute__((interrupt, auto_psv)) _ADC1Interrupt()
     }
 }
 
-void __attribute__((interrupt, no_auto_psv)) _U1TXInterrupt()
+void __attribute__((interrupt, auto_psv)) _U1TXInterrupt()
 {
     if (IFS0bits.U1TXIF) {
         IFS0bits.U1TXIF = 0;
@@ -172,7 +174,7 @@ void __attribute__((interrupt, no_auto_psv)) _U1TXInterrupt()
     }
 }
 
-void __attribute__((interrupt, no_auto_psv)) _U1RXInterrupt()
+void __attribute__((interrupt, auto_psv)) _U1RXInterrupt()
 {
     if (IFS0bits.U1RXIF) {
         IFS0bits.U1RXIF = 0;
