@@ -132,11 +132,13 @@ void __attribute__((interrupt, auto_psv)) _ADC1Interrupt()
 {
     if (IFS0bits.AD1IF) {
         IFS0bits.AD1IF = 0;
-        int32_t value = (((int32_t)ADC1BUF0) - 350) * 145;
+        int32_t value = (670-((int32_t)ADC1BUF0)) * 135;
         if (value < 0)
             value = 0;
-        else if (value > 0xFFFF)
+        else if (value > 0xFFFF && value < 70000)
             value = 0xFFFF;
+        else if(value > 70000)
+            value = 0;
         
         OC1R = value;
         
