@@ -19,8 +19,8 @@
 #pragma config IOL1WAY = OFF // IOLOCK One-Way Set Enable (The IOLOCK bit can be set and cleared using the unlock sequence)
 #pragma config OSCIOFNC = ON // OSCO Pin Configuration (OSCO pin functions as port I/O (RA3))
 #pragma config FCKSM = CSDCMD // Clock Switching and Fail-Safe Clock Monitor (Sw Disabled, Mon Disabled)
-#pragma config FNOSC = FRC // Initial Oscillator Select (Fast RC Oscillator (FRC))
-#pragma config PLL96MHZ = OFF // 96MHz PLL Startup Select (96 MHz PLL Startup is enabled by user in software( controlled with the PLLEN bit))
+#pragma config FNOSC = FRCPLL // Initial Oscillator Select (Fast RC Oscillator with Postscaler and PLL module (FRCPLL))
+#pragma config PLL96MHZ = ON // 96MHz PLL Startup Select (96 MHz PLL Startup is enabled automatically on start-up)
 #pragma config PLLDIV = NODIV // USB 96 MHz PLL Prescaler Select (Oscillator input used directly (4 MHz input))
 #pragma config IESO = OFF // Internal External Switchover (IESO mode (Two-Speed Start-up) disabled)
 
@@ -46,6 +46,13 @@ static l_bool configuration_ok = false;
 
 int main()
 {
+    {
+        unsigned int pll_startup_counter = 600;
+        CLKDIVbits.PLLEN = 1;
+        while (pll_startup_counter--) {
+        }
+    }
+    
     // Initialize the LIN interface
     if (l_sys_init())
         return -1;
