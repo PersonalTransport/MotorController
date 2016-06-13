@@ -34,10 +34,11 @@
 #pragma config GCP = OFF // General Segment Code Protect (Code protection is disabled)
 #pragma config JTAGEN = OFF // JTAG Port Enable (JTAG port is disabled)
 
-#include <igbt_thermistor.h>
 #include <libpic30.h>
-#include <motor_controller.h>
 #include <xc.h>
+
+#include "igbt_thermistor.h"
+#include <motor_controller.h>
 
 void initPWM();
 void initTmr2PWM();
