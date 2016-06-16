@@ -4,7 +4,7 @@
     <configuration>
         <data xmlns="http://www.netbeans.org/ns/make-project/1">
             <name>MotorControllerNode</name>
-            <creation-uuid>67e6d205-ecce-4326-bfcc-c04de16a7763</creation-uuid>
+            <creation-uuid>592acbe6-f629-4831-a778-559f7217c8d6</creation-uuid>
             <make-project-type>0</make-project-type>
             <c-extensions>c</c-extensions>
             <cpp-extensions/>
