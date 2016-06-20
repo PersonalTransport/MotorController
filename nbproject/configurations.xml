@@ -12,6 +12,9 @@
         <itemPath>mcc_generated_files/pwm.h</itemPath>
         <itemPath>mcc_generated_files/pin_manager.h</itemPath>
       </logicalFolder>
+      <itemPath>park.h</itemPath>
+      <itemPath>pid.h</itemPath>
+      <itemPath>space_vector_modulation.h</itemPath>
     </logicalFolder>
     <logicalFolder name="LinkerScript"
                    displayName="Linker Files"
@@ -227,6 +230,7 @@
         <property key="ToolFirmwareOption.UseLatestFirmware" value="true"/>
         <property key="UART 1" value="true"/>
         <property key="UART 2" value="true"/>
+        <property key="firmware.download.all" value="false"/>
         <property key="hwtoolclock.frcindebug" value="false"/>
         <property key="memories.aux" value="false"/>
         <property key="memories.bootflash" value="true"/>
