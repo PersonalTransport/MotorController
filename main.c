@@ -1,31 +1,11 @@
 #include "mcc_generated_files/mcc.h"
-#include "lin_generated_files/motor_controller.h"
+#include "mcc_generated_files/pwm.h"
 
 #include <math.h>
 #include <dsp.h>
 #include <libpic30.h>
 
-#define PERIOD 0xFFB
-
 static const float sqrt_3 = 1.73205080757f;
-
-static inline void set_a_duty_cycle(unsigned int duty_cycle) {
-    duty_cycle = duty_cycle / 2;
-    unsigned int p_d = PERIOD - duty_cycle + 1;
-    OC1_DualCompareValueSet(p_d,duty_cycle);
-}
-
-static inline void set_b_duty_cycle(unsigned int duty_cycle) {
-    duty_cycle = duty_cycle / 2;
-    unsigned int p_d = PERIOD - duty_cycle + 1;
-    OC2_DualCompareValueSet(p_d,duty_cycle);
-}
-
-static inline void set_c_duty_cycle(unsigned int duty_cycle) {
-    duty_cycle = duty_cycle / 2;
-    unsigned int p_d = PERIOD - duty_cycle + 1;
-    OC3_DualCompareValueSet(p_d,duty_cycle);
-}
 
 static inline void clarke_transform(float a, float b, float *alpha, float *beta) {
     *alpha = a;
@@ -75,7 +55,7 @@ float pid_step(struct PID_data *data,float actual,float target) {
     return data->kp * data->error + (data->ki * data->integral_error) + (data->kd * data->delta_error);
 }
 
-void write_space_vector_modulation(float theta,float a,float b,float c) {
+static inline void write_space_vector_modulation(float theta,float a,float b,float c) {
     float T1,T2,A,B,C;
     if(theta >= 5.0f*PI/3.0f) { // Sector 6
         T1 = -b;
@@ -121,9 +101,9 @@ void write_space_vector_modulation(float theta,float a,float b,float c) {
     }
     
     // TODO check that A,B, and C are always positive.
-    set_a_duty_cycle(PERIOD * A);
-    set_b_duty_cycle(PERIOD * B);
-    set_c_duty_cycle(PERIOD * C);
+    PDC1 = PWM_PERIOD * A;
+    PDC2 = PWM_PERIOD * B;
+    PDC3 = PWM_PERIOD * C;
 }
 
 #define Kp 0
@@ -141,28 +121,16 @@ static struct PID_data q_current_pid;
 int main()
 {
     SYSTEM_Initialize();
-    INTERRUPT_GlobalEnable();
-
-     // Initialize the LIN interface
-    if (l_sys_init())
-        return -1;
-
-    // Initialize the interface
-    if (l_ifc_init_UART1())
-        return -1;
-
-    // Set UART TX to interrupt level 5
-    // Set UART RX to interrupt level 5
-    struct l_irqmask irqmask = { 5, 5 };
-    l_sys_irq_restore(irqmask);
+    
+    TRISBbits.TRISB5 = 0;
 
     pid_setup(&d_current_pid,Kp,Ki,Kd);
     pid_setup(&q_current_pid,Kp,Ki,Kd);
 
+    float x = 0;
     while (1) {
-        TEST_PIN_Toggle();
-        __delay_ms(10);
-        /*in_theta = PI*SPI2_Exchange16bit(0xFFFF)/180.0f;
+        float in_theta = x;//PI*SPI2_Exchange16bit(0xFFFF)/180.0f;
+        x += 1e-6f;
 
         float sin_theta = sinf(in_theta);
         float cos_theta = cosf(in_theta);
@@ -181,41 +149,10 @@ int main()
         float out_i_a,out_i_b,out_i_c;
         inverse_clarke_transform(alpha,beta,&out_i_a,&out_i_b,&out_i_c);
         
-        write_space_vector_modulation(in_theta,out_i_a,out_i_b,out_i_c);*/
+        write_space_vector_modulation(in_theta,out_i_a,out_i_b,out_i_c);
+        
+        LATBbits.LATB5 ^= 1;
     }
 
     return -1;
-}
-
-void TMR5_CallBack() {
-    //TEST_PIN_Toggle();
-}
-
-void __attribute__((interrupt, auto_psv)) _AD1Interrupt()
-{
-    IFS0bits.AD1IF = false;
-    in_i_a = ADC1BUF0/1024.0f; // TODO read real value
-    in_i_b = ADC1BUF1/1024.0f; // TODO read real value
-    commanded_q_current = ADC1BUF2/1024.0f; // TODO read real value
-}
-
-struct l_irqmask l_sys_irq_disable()
-{
-    struct l_irqmask mask = { IPC2bits.U1RXIP, IPC3bits.U1TXIP };
-    IEC0bits.U1RXIE = 0;
-    IEC0bits.U1TXIE = 0;
-    IFS0bits.U1TXIF = 0;
-    IFS0bits.U1RXIF = 0;
-    return mask;
-}
-
-void l_sys_irq_restore(struct l_irqmask previous)
-{
-    IPC2bits.U1RXIP = previous.rx_level;
-    IFS0bits.U1TXIF = 0;
-    IEC0bits.U1RXIE = 1;
-
-    IPC3bits.U1TXIP = previous.tx_level;
-    IFS0bits.U1RXIF = 0;
-    IEC0bits.U1TXIE = 1;
 }
