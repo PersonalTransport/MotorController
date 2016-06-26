@@ -4,15 +4,11 @@
 #include "mcc_generated_files/pwm.h"
 #include <libq.h>
 
-#define _Q16_PI_DIV_3 68629L
-#define _Q16_2_PI_DIV_3 137258L
-#define _Q16_PI 205887L
-#define _Q16_4_PI_DIV_3 274516L
-#define _Q16_5_PI_DIV_3 343145L
+
 
 #define _Q16_PWM_PERIOD 392429568L
 
-static inline void write_space_vector_modulation(_Q16 theta, _Q16 a, _Q16 b, _Q16 c)
+/*static inline void write_space_vector_modulation(_Q16 theta, _Q16 a, _Q16 b, _Q16 c)
 {
     _Q16 T1, T2, A, B, C;
     if (theta >= _Q16_5_PI_DIV_3) { // Sector 6
@@ -54,9 +50,9 @@ static inline void write_space_vector_modulation(_Q16 theta, _Q16 a, _Q16 b, _Q1
     }
 
     // TODO check that A,B, and C are always positive.
-    PDC1 = _Q16mpy(_Q16_PWM_PERIOD,A);
-    PDC2 = _Q16mpy(_Q16_PWM_PERIOD,B);
-    PDC3 = _Q16mpy(_Q16_PWM_PERIOD,C);
-}
+    PDC1 = _Q16mpy(_Q16_PWM_PERIOD, A);
+    PDC2 = _Q16mpy(_Q16_PWM_PERIOD, B);
+    PDC3 = _Q16mpy(_Q16_PWM_PERIOD, C);
+}*/
 
 #endif //SPACE_VECTOR_MODULATION_H

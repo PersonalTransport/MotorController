@@ -10,27 +10,24 @@ struct PID_data {
     _Q16 integral_error;
 };
 
-static inline void pid_setup(struct PID_data* data, _Q16 kp, _Q16 ki, _Q16 kd)
-{
-    data->kp = kp;
-    data->ki = ki;
-    data->kd = kd;
-    data->error = 0;
-    data->delta_error = 0;
-    data->integral_error = 0;
-}
+//for tuning Ziegler?Nichols method
+//https://en.wikipedia.org/wiki/PID_controller
 
-static inline _Q16 pid_step(struct PID_data* data, _Q16 actual, _Q16 target)
-{
-    //for tuning Ziegler?Nichols method
-    //https://en.wikipedia.org/wiki/PID_controller
+#define pid_setup(data, Kp, Ki, Kd) \
+    data.kp = Kp;                   \
+    data.ki = Ki;                   \
+    data.kd = Kd;                   \
+    data.error = 0;                 \
+    data.delta_error = 0;           \
+    data.integral_error = 0;
 
-    float error = actual - target;
-    data->integral_error += error;
-    data->delta_error = error - data->error;
-    data->error = error;
-    return _Q16mpy(data->kp,data->error) + _Q16mpy(data->ki,data->integral_error) + _Q16mpy(data->kd,data->delta_error);
-    //return (data->kp * data->error) + (data->ki * data->integral_error) + (data->kd * data->delta_error);
-}
+#define pid_step(data, actual, target, output)                                                                              \
+    {                                                                                                                       \
+        _Q16 error = actual - target;                                                                                       \
+        data.integral_error += error;                                                                                       \
+        data.delta_error = error - data.error;                                                                              \
+        data.error = error;                                                                                                 \
+        output = _Q16mpy(data.kp, data.error) + _Q16mpy(data.ki, data.integral_error) + _Q16mpy(data.kd, data.delta_error); \
+    }
 
 #endif // PID_H
