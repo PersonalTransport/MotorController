@@ -1,15 +1,7 @@
 #ifndef CLARKE_H
 #define CLARKE_H
 
-#include <libq.h>
-
-#define _Q16_TWO 131072L
-#define _Q16_1_DIV_2 32768L
-#define _Q16_SQRT_3 113511L
-#define _Q16_1_DIV_SQRT_3 37837L
-
-#define _Q16_1_DIV_2_SQRT_3 18918L
-
+#include "math_utils.h"
 
 #define clarke_transform(a, b, alpha, beta) \
     alpha = a;                              \

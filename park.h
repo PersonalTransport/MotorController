@@ -1,7 +1,7 @@
 #ifndef PARK_H
 #define PARK_H
 
-#include <libq.h>
+#include "math_utils.h"
 
 #define park_transform(alpha, beta, sin_theta, cos_theta, d, q) \
     d = (_Q16mpy(alpha, cos_theta) + _Q16mpy(beta, sin_theta)); \

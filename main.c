@@ -1,17 +1,12 @@
 #include "mcc_generated_files/mcc.h"
 
-#include <stdint.h>
-#include <stdbool.h>
-
+#include "math_utils.h"
 #include "clarke.h"
 #include "park.h"
 #include "pid.h"
 #include "space_vector_modulation.h"
 
-#include <libq.h>
-#include <libpic30.h>
-
-#define _Q16_1_DIV_1023 64L
+#include <stdint.h>
 
 #define _Q16_Kp 65536L
 #define _Q16_Ki 65536L
@@ -22,83 +17,7 @@
 #define convert_current(x) _Q16mpy(x * 65536L,3932L) - 2027188L - 1724L
 #define convert_current_scaled(x) _Q16mpy(convert_current(x),_Q16_1_DIV_MAX_CURRENT)
 
-#define my_abs(x) ((x < 0) ? -x : x)
-#define my_max(x,y) ((x > y) ? x : y)
-#define my_min(x,y) ((x < y) ? x : y)
-
-#define saturate_positive_one(x) my_max(0,my_min(x,65536L))
-#define sign(x) (x > 0 ? 1 : 0)
-
-enum sector {
-    SECTOR_ONE = 3,
-    SECTOR_TWO = 2,
-    SECTOR_THREE = 6,
-    SECTOR_FOUR = 4,
-    SECTOR_FIVE = 5,
-    SECTOR_SIX = 1,
-};
-
-static inline void write_space_vector_modulation(_Q16 a, _Q16 b, _Q16 c)
-{
-    unsigned int N = 4 * sign(c) + 2*sign(b) + sign(a);
-    _Q16 T1, T2, A, B, C;
-    switch(N) {
-        case SECTOR_ONE: {
-            T1 = a;
-            T2 = b;
-            A = T1 + T2;
-            B = T2;
-            C = 0;
-            break;
-        }
-        case SECTOR_TWO: {
-            T1 = -c;
-            T2 = -a;
-            A = T1;
-            B = T1 + T2;
-            C = 0;
-            break;
-        }
-        case SECTOR_THREE: {
-            T1 = b;
-            T2 = c;
-            A = 0;
-            B = T1 + T2;
-            C = T2;
-            break;
-        }
-        case SECTOR_FOUR: {
-            T1 = -a;
-            T2 = -b;
-            A = 0;
-            B = T1;
-            C = T1 + T2;
-            break;
-        }
-        case SECTOR_FIVE: {
-            T1 = c;
-            T2 = a;
-            A = T2;
-            B = 0;
-            C = T1 + T2;
-            break;
-        }
-        case SECTOR_SIX: {
-            T1 = -b;
-            T2 = -c;
-            A = T1 + T2;
-            B = 0;
-            C = T1;
-            break;
-        }
-    }
-    
-    PDC1 = my_min(_Q16mpy(_Q16_PWM_PERIOD, A ) / 65536L,PWM_PERIOD);
-    PDC2 = my_min(_Q16mpy(_Q16_PWM_PERIOD, B ) / 65536L,PWM_PERIOD);
-    PDC3 = my_min(_Q16mpy(_Q16_PWM_PERIOD, C ) / 65536L,PWM_PERIOD);
-}
-
-uint16_t SPI2_Exchange16bit( uint16_t txData )
+uint16_t SPI2_Exchange16bit(uint16_t txData)
 {
     
     SPI2BUF = txData;
@@ -209,15 +128,13 @@ int main()
 
     while (1) {
         AD1CON1bits.SAMP = 1; // Start sampling
-        while (!AD1CON1bits.DONE) {
-        } // Wait for the conversion to complete
+        _Q16 in_theta = as5048a_read_angle() * 25L - 0x5CAE; // TODO convert to electrical angle.
+        while (!AD1CON1bits.DONE); // Wait for the conversion to complete
         
         // TODO over current brakes things very very badly
         _Q16 in_i_a = convert_current_scaled(ADC1BUF1);//-_Q16sin(in_theta);
         _Q16 in_i_b = convert_current_scaled(ADC1BUF2);//-_Q16sin(in_theta - 137258L);
         _Q16 commanded_q_current = saturate_positive_one(ADC1BUF3 * 72L);
-        
-        _Q16 in_theta = as5048a_read_angle() * 25L;
 
         _Q16 sin_theta = _Q16sin(in_theta);
         _Q16 cos_theta = _Q16cos(in_theta);

@@ -1,7 +1,7 @@
 #ifndef PID_H
 #define PID_H
 
-#include <libq.h>
+#include "math_utils.h"
 
 struct PID_data {
     _Q16 kp, ki, kd;
