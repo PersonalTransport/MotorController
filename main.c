@@ -133,7 +133,14 @@ uint16_t as5048a_Exchange16bit(uint16_t txData) {
     LATBbits.LATB6 = 0;
     uint16_t out = SPI2_Exchange16bit(txData);
     LATBbits.LATB6 = 1;
-    __delay_us(4);
+    // Delay 400ns
+    Nop();
+    Nop();
+    Nop();
+    Nop();
+    Nop();
+    Nop();
+    Nop();
     return out;
 }
 
@@ -145,7 +152,6 @@ long as5048a_read_angle()
     
     return as5048a_Exchange16bit(0x0000) & 0x3FFF;
 }
-
 
 int main()
 {
@@ -180,6 +186,10 @@ int main()
 
     IFS2bits.SPI2IF = 0; // Clear the Interrupt flag
     IEC2bits.SPI2IE = 0; // Disable the interrupt
+    
+    SPI2CON1bits.PPRE = 3; // Primary prescale 1:1
+    SPI2CON1bits.SPRE = 1; // Secondary prescale 7:1
+    
     SPI2CON1bits.DISSCK = 0; // Internal serial clock is enabled
     SPI2CON1bits.DISSDO = 0; // SDOx pin is controlled by the module
     SPI2CON1bits.MODE16 = 1; // Communication is word-wide (16 bits)
