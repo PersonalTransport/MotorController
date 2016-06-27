@@ -1,11 +1,16 @@
 #include "mcc_generated_files/mcc.h"
 
+#include <stdint.h>
+#include <stdbool.h>
+
 #include "clarke.h"
 #include "park.h"
 #include "pid.h"
 #include "space_vector_modulation.h"
 
 #include <libq.h>
+#include <libpic30.h>
+
 #define _Q16_1_DIV_1023 64L
 
 #define _Q16_Kp 65536L
@@ -93,14 +98,67 @@ static inline void write_space_vector_modulation(_Q16 a, _Q16 b, _Q16 c)
     PDC3 = my_min(_Q16mpy(_Q16_PWM_PERIOD, C ) / 65536L,PWM_PERIOD);
 }
 
+uint16_t SPI2_Exchange16bit( uint16_t txData )
+{
+    
+    SPI2BUF = txData;
+    while (SPI2STATbits.SPITBF); 
+    while (!SPI2STATbits.SPIRBF);
+    return SPI2BUF;
+}
+
+#define SPI_CMD_READ 0x4000 // flag indicating read attempt
+#define SPI_CMD_WRITE 0x8000 // flag indicating write attempt
+#define SPI_REG_AGC 0x3ffd // agc register when using SPI
+#define SPI_REG_MAG 0x3ffe // magnitude register when using SPI
+#define SPI_REG_DATA 0x3fff // data register when using SPI
+#define SPI_REG_CLRERR 0x1 // clear error register when using SPI
+#define SPI_REG_ZEROPOS_HI 0x0016 // zero position register high byte
+#define SPI_REG_ZEROPOS_LO 0x0017 // zero position register low byte
+
+static uint16_t as5048a_calc_even_parity(uint16_t value)
+{
+    uint16_t cnt = 0;
+    uint16_t i;
+    for (i = 0; i < 16; i++)
+    {
+        if (value & 0x1) 
+            cnt++;
+        value >>= 1;
+    }
+    return cnt & 0x1;
+}
+
+uint16_t as5048a_Exchange16bit(uint16_t txData) {
+    LATBbits.LATB6 = 0;
+    uint16_t out = SPI2_Exchange16bit(txData);
+    LATBbits.LATB6 = 1;
+    __delay_us(4);
+    return out;
+}
+
+long as5048a_read_angle()
+{  
+    uint16_t cmd = SPI_CMD_READ | SPI_REG_DATA;
+    cmd |= as5048a_calc_even_parity(cmd) << 15;
+    as5048a_Exchange16bit(cmd);
+    
+    return as5048a_Exchange16bit(0x0000) & 0x3FFF;
+}
+
+
 int main()
 {
-    SYSTEM_Initialize();
+    TRISBbits.TRISB5 = 0;
     
     TRISBbits.TRISB8 = 1;
     TRISBbits.TRISB9 = 0;
     TRISBbits.TRISB6 = 0;
     TRISBbits.TRISB7 = 0;
+    
+    LATBbits.LATB6 = 1;
+    
+    SYSTEM_Initialize();
     
     __builtin_write_OSCCONL(OSCCON & ~(1<<6));
     //SDI --> MISO --> RP40 RB8
@@ -110,38 +168,35 @@ int main()
     RPOR3bits.RP41R = 8;
             
     //CSn --> SS2 -->  RP38 RB6
-    RPOR2bits.RP38R = 10;
+    //RPOR2bits.RP38R = 10;
     
     //SCK --> CLK --> RP39 RB7
     RPOR2bits.RP39R = 9;
+    
+    //SCK --> CLK --> RP39 RB7
+    RPINR22bits.SCK2R = 39;
     
     __builtin_write_OSCCONL(OSCCON | (1<<6));
 
     IFS2bits.SPI2IF = 0; // Clear the Interrupt flag
     IEC2bits.SPI2IE = 0; // Disable the interrupt
-    // SPI1CON1 Register Settings
     SPI2CON1bits.DISSCK = 0; // Internal serial clock is enabled
     SPI2CON1bits.DISSDO = 0; // SDOx pin is controlled by the module
     SPI2CON1bits.MODE16 = 1; // Communication is word-wide (16 bits)
-    SPI2CON1bits.SMP = 0; // Input data is sampled at the middle of data output time
-    SPI2CON1bits.CKE = 0; // Serial output data changes on transition from
-    // Idle clock state to active clock state
-    SPI2CON1bits.CKP = 0; // Idle state for clock is a low-level;
-    // active state is a high-level
+    
+    SPI2CON1bits.SMP = 0;
+    SPI2CON1bits.CKE = 0;
+    SPI2CON1bits.CKP = 0;
+    
     SPI2CON1bits.MSTEN = 1; // Master mode enabled
     SPI2STATbits.SPIEN = 1; // Enable SPI module
-    SPI2BUF = 0x0000; // Write data to be transmitted
-    // Interrupt Controller Settings
-    IFS2bits.SPI2IF = 0; // Clear the Interrupt flag
-    IEC2bits.SPI2IE = 0; // Enable the interrupt
-
+  
     static struct PID_data d_current_pid;
     static struct PID_data q_current_pid;
 
     pid_setup(d_current_pid, _Q16_Kp, _Q16_Ki, _Q16_Kd);
     pid_setup(q_current_pid, _Q16_Kp, _Q16_Ki, _Q16_Kd);
 
-    _Q16 in_theta = 0;
     while (1) {
         AD1CON1bits.SAMP = 1; // Start sampling
         while (!AD1CON1bits.DONE) {
@@ -151,11 +206,11 @@ int main()
         _Q16 in_i_a = convert_current_scaled(ADC1BUF1);//-_Q16sin(in_theta);
         _Q16 in_i_b = convert_current_scaled(ADC1BUF2);//-_Q16sin(in_theta - 137258L);
         _Q16 commanded_q_current = saturate_positive_one(ADC1BUF3 * 72L);
+        
+        _Q16 in_theta = as5048a_read_angle() * 25L;
 
         _Q16 sin_theta = _Q16sin(in_theta);
         _Q16 cos_theta = _Q16cos(in_theta);
-        
-        in_theta += 400L;
 
         _Q16 alpha, beta;
         clarke_transform(in_i_a, in_i_b, alpha, beta);
@@ -175,6 +230,7 @@ int main()
         inverse_clarke_transform(alpha, beta, out_i_a, out_i_b, out_i_c);
 
         write_space_vector_modulation(out_i_a, out_i_b, out_i_c);        
+        
         LATBbits.LATB5 ^= 1;
     }
 
