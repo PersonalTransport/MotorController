@@ -17,15 +17,6 @@
 #define convert_current(x) _Q16mpy(x * 65536L,3932L) - 2027188L - 1724L
 #define convert_current_scaled(x) _Q16mpy(convert_current(x),_Q16_1_DIV_MAX_CURRENT)
 
-uint16_t SPI2_Exchange16bit(uint16_t txData)
-{
-    
-    SPI2BUF = txData;
-    while (SPI2STATbits.SPITBF); 
-    while (!SPI2STATbits.SPIRBF);
-    return SPI2BUF;
-}
-
 #define SPI_CMD_READ 0x4000 // flag indicating read attempt
 #define SPI_CMD_WRITE 0x8000 // flag indicating write attempt
 #define SPI_REG_AGC 0x3ffd // agc register when using SPI
@@ -73,53 +64,9 @@ long as5048a_read_angle()
 }
 
 int main()
-{
-    TRISBbits.TRISB5 = 0;
-    
-    TRISBbits.TRISB8 = 1;
-    TRISBbits.TRISB9 = 0;
-    TRISBbits.TRISB6 = 0;
-    TRISBbits.TRISB7 = 0;
-    
-    LATBbits.LATB6 = 1;
-    
+{   
     SYSTEM_Initialize();
-    
-    __builtin_write_OSCCONL(OSCCON & ~(1<<6));
-    //SDI --> MISO --> RP40 RB8
-    RPINR22bits.SDI2R = 40;
-    
-    //SDO --> MOSI --> RP41 RB9
-    RPOR3bits.RP41R = 8;
-            
-    //CSn --> SS2 -->  RP38 RB6
-    //RPOR2bits.RP38R = 10;
-    
-    //SCK --> CLK --> RP39 RB7
-    RPOR2bits.RP39R = 9;
-    
-    //SCK --> CLK --> RP39 RB7
-    RPINR22bits.SCK2R = 39;
-    
-    __builtin_write_OSCCONL(OSCCON | (1<<6));
 
-    IFS2bits.SPI2IF = 0; // Clear the Interrupt flag
-    IEC2bits.SPI2IE = 0; // Disable the interrupt
-    
-    SPI2CON1bits.PPRE = 3; // Primary prescale 1:1
-    SPI2CON1bits.SPRE = 1; // Secondary prescale 7:1
-    
-    SPI2CON1bits.DISSCK = 0; // Internal serial clock is enabled
-    SPI2CON1bits.DISSDO = 0; // SDOx pin is controlled by the module
-    SPI2CON1bits.MODE16 = 1; // Communication is word-wide (16 bits)
-    
-    SPI2CON1bits.SMP = 0;
-    SPI2CON1bits.CKE = 0;
-    SPI2CON1bits.CKP = 0;
-    
-    SPI2CON1bits.MSTEN = 1; // Master mode enabled
-    SPI2STATbits.SPIEN = 1; // Enable SPI module
-  
     static struct PID_data d_current_pid;
     static struct PID_data q_current_pid;
 
@@ -157,8 +104,6 @@ int main()
         inverse_clarke_transform(alpha, beta, out_i_a, out_i_b, out_i_c);
 
         write_space_vector_modulation(out_i_a, out_i_b, out_i_c);        
-        
-        LATBbits.LATB5 ^= 1;
     }
 
     return -1;

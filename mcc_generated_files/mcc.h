@@ -1,5 +1,11 @@
 #ifndef MCC_H
 #define MCC_H
+#include "interrupt_manager.h"
+#include "pin_manager.h"
+#include "pwm.h"
+#include "spi2.h"
+#include <stdbool.h>
+#include <stdint.h>
 #include <xc.h>
 
 #define _XTAL_FREQ 119762500UL

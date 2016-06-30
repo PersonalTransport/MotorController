@@ -1,7 +1,7 @@
 #ifndef SPACE_VECTOR_MODULATION_H
 #define SPACE_VECTOR_MODULATION_H
 
-#include "mcc_generated_files/pwm.h"
+#include "mcc_generated_files/mcc.h"
 
 #include "math_utils.h"
 
