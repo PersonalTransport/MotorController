@@ -17,6 +17,13 @@
 #define NFAULT_TXESetDigitalInput() _TRISA3 = 1
 #define NFAULT_TXESetDigitalOutput() _TRISA3 = 0
 
+#define U1TXSetHigh() _LATA4 = 1
+#define U1TXSetLow() _LATA4 = 0
+#define U1TXToggle() _LATA4 ^= 1
+#define U1TXGetValue() _RA4
+#define U1TXSetDigitalInput() _TRISA4 = 1
+#define U1TXSetDigitalOutput() _TRISA4 = 0
+
 #define U1RXSetHigh() _LATB5 = 1
 #define U1RXSetLow() _LATB5 = 0
 #define U1RXToggle() _LATB5 ^= 1

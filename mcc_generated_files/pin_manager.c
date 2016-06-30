@@ -28,7 +28,7 @@ void PIN_MANAGER_Initialize()
     RPINR18bits.U1RXR = 37; //Assign U1RX To Pin RP37
     
     //TxD --> U1TX --> RP20 RA4
-    RPOR0bits.RP20R = 3; //Assign U1TX To Pin RP20
+    RPOR0bits.RP20R = 1; //Assign U1TX To Pin RP20
     
     //CS/LWAKE --> RP36 RB4
     //FAULT/TXE --> RA3
