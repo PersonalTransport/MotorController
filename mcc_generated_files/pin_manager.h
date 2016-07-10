@@ -3,40 +3,40 @@
 
 #include <xc.h>
 
-#define CS_LWAKESetHigh() _LATB4 = 1
-#define CS_LWAKESetLow() _LATB4 = 0
-#define CS_LWAKEToggle() _LATB4 ^= 1
-#define CS_LWAKEGetValue() _RB4
-#define CS_LWAKESetDigitalInput() _TRISB4 = 1
-#define CS_LWAKESetDigitalOutput() _TRISB4 = 0
+#define UART1_CS_LWAKE_SetHigh() _LATB4 = 1
+#define UART1_CS_LWAKE_SetLow() _LATB4 = 0
+#define UART1_CS_LWAKE_Toggle() _LATB4 ^= 1
+#define UART1_CS_LWAKE_GetValue() _RB4
+#define UART1_CS_LWAKE_SetDigitalInput() _TRISB4 = 1
+#define UART1_CS_LWAKE_SetDigitalOutput() _TRISB4 = 0
 
-#define NFAULT_TXESetHigh() _LATA3 = 1
-#define NFAULT_TXESetLow() _LATA3 = 0
-#define NFAULT_TXEToggle() _LATA3 ^= 1
-#define NFAULT_TXEGetValue() _RA3
-#define NFAULT_TXESetDigitalInput() _TRISA3 = 1
-#define NFAULT_TXESetDigitalOutput() _TRISA3 = 0
+#define UART1_NFAULT_TXE_SetHigh() _LATA3 = 1
+#define UART1_NFAULT_TXE_SetLow() _LATA3 = 0
+#define UART1_NFAULT_TXE_Toggle() _LATA3 ^= 1
+#define UART1_NFAULT_TXE_GetValue() _RA3
+#define UART1_NFAULT_TXE_SetDigitalInput() _TRISA3 = 1
+#define UART1_NFAULT_TXE_SetDigitalOutput() _TRISA3 = 0
 
-#define U1TXSetHigh() _LATA4 = 1
-#define U1TXSetLow() _LATA4 = 0
-#define U1TXToggle() _LATA4 ^= 1
-#define U1TXGetValue() _RA4
-#define U1TXSetDigitalInput() _TRISA4 = 1
-#define U1TXSetDigitalOutput() _TRISA4 = 0
+#define UART1_TX_SetHigh() _LATA4 = 1
+#define UART1_TX_SetLow() _LATA4 = 0
+#define UART1_TX_Toggle() _LATA4 ^= 1
+#define UART1_TX_GetValue() _RA4
+#define UART1_TX_SetDigitalInput() _TRISA4 = 1
+#define UART1_TX_SetDigitalOutput() _TRISA4 = 0
 
-#define U1RXSetHigh() _LATB5 = 1
-#define U1RXSetLow() _LATB5 = 0
-#define U1RXToggle() _LATB5 ^= 1
-#define U1RXGetValue() _RB5
-#define U1RXSetDigitalInput() _TRISB5 = 1
-#define U1RXSetDigitalOutput() _TRISB5 = 0
+#define UART1_RX_SetHigh() _LATB5 = 1
+#define UART1_RX_SetLow() _LATB5 = 0
+#define UART1_RX_Toggle() _LATB5 ^= 1
+#define UART1_RX_GetValue() _RB5
+#define UART1_RX_SetDigitalInput() _TRISB5 = 1
+#define UART1_RX_SetDigitalOutput() _TRISB5 = 0
 
-#define U1TXSetHigh() _LATA4 = 1
-#define U1TXSetLow() _LATA4 = 0
-#define U1TXToggle() _LATA4 ^= 1
-#define U1TXGetValue() _RA4
-#define U1TXSetDigitalInput() _TRISA4 = 1
-#define U1TXSetDigitalOutput() _TRISA4 = 0
+#define UART1_TX_SetHigh() _LATA4 = 1
+#define UART1_TX_SetLow() _LATA4 = 0
+#define UART1_TX_Toggle() _LATA4 ^= 1
+#define UART1_TX_GetValue() _RA4
+#define UART1_TX_SetDigitalInput() _TRISA4 = 1
+#define UART1_TX_SetDigitalOutput() _TRISA4 = 0
 
 void PIN_MANAGER_Initialize();
 
