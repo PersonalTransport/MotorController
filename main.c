@@ -88,11 +88,11 @@ int main()
         }
         if(l_flg_tst_d_axis_current()) {
             l_flg_clr_d_axis_current();
-            l_bytes_wr_d_axis_current(0,4,(l_u8 *)&in_i_a);
+            l_bytes_wr_d_axis_current(0,4,(l_u8 *)&in_i_d);
         }
         if(l_flg_tst_q_axis_current()) {
             l_flg_clr_q_axis_current();
-            l_bytes_wr_q_axis_current(0,4,(l_u8 *)&in_i_b);
+            l_bytes_wr_q_axis_current(0,4,(l_u8 *)&in_i_q);
         }
     }
 
