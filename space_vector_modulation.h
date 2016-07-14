@@ -13,13 +13,13 @@ enum sector {
     SECTOR_THREE = 6,
     SECTOR_FOUR = 4,
     SECTOR_FIVE = 5,
-    SECTOR_SIX = 1,
+    SECTOR_SIX = 1
 };
 
 static inline void write_space_vector_modulation(_Q16 a, _Q16 b, _Q16 c)
 {
     unsigned int N = 4 * sign(c) + 2*sign(b) + sign(a);
-    _Q16 T1, T2, A, B, C;
+    _Q16 T1 = 0, T2 = 0, A = 0, B = 0, C = 0;
     switch(N) {
         case SECTOR_ONE: {
             T1 = a;
