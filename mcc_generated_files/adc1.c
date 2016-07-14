@@ -23,8 +23,8 @@ void ADC1_Initialize()
     AD1CON2bits.ALTS = 0; // Always uses channel input selects for Sample A
 
     AD1CON3bits.ADRC = 0; // Clock Derived From System Clock
-    AD1CON3bits.SAMC = 2; // 2 * TAD
-    AD1CON3bits.ADCS = 4; // 5 * TCY = TAD
+    AD1CON3bits.SAMC = 27; // 31 * TAD
+    AD1CON3bits.ADCS = 11; // 12 * TCY = TAD
 
     AD1CON4bits.ADDMAEN = 0; // Conversion results stored in ADC1BUF0 through ADC1BUFF registers; DMA will not be used
     AD1CON4bits.DMABL = 0; // Allocates 1 word of buffer to each analog input
