@@ -4,6 +4,9 @@
     <logicalFolder name="HeaderFiles"
                    displayName="Header Files"
                    projectFiles="true">
+      <logicalFolder name="f1" displayName="LIN Generated Files" projectFiles="true">
+        <itemPath>lin_generated_files/motor_controller.h</itemPath>
+      </logicalFolder>
       <logicalFolder name="MCC Generated Files"
                      displayName="MCC Generated Files"
                      projectFiles="true">
@@ -19,7 +22,6 @@
       <itemPath>space_vector_modulation.h</itemPath>
       <itemPath>clarke.h</itemPath>
       <itemPath>math_utils.h</itemPath>
-      <itemPath>lin_generated_files/motor_controller.h</itemPath>
       <itemPath>as5048a.h</itemPath>
     </logicalFolder>
     <logicalFolder name="LinkerScript"
@@ -29,6 +31,9 @@
     <logicalFolder name="SourceFiles"
                    displayName="Source Files"
                    projectFiles="true">
+      <logicalFolder name="f1" displayName="LIN Generated Files" projectFiles="true">
+        <itemPath>lin_generated_files/motor_controller.c</itemPath>
+      </logicalFolder>
       <logicalFolder name="MCC Generated Files"
                      displayName="MCC Generated Files"
                      projectFiles="true">
@@ -40,7 +45,6 @@
         <itemPath>mcc_generated_files/interrupt_manager.c</itemPath>
       </logicalFolder>
       <itemPath>main.c</itemPath>
-      <itemPath>lin_generated_files/motor_controller.c</itemPath>
       <itemPath>as5048a.c</itemPath>
     </logicalFolder>
     <logicalFolder name="ExternalFiles"

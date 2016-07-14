@@ -128,21 +128,24 @@ void PWM_Initialize()
 {
     PTCONbits.PTEN = 0; // PWM module is disabled
     PTCONbits.PTSIDL = 0; // PWM time base runs in CPU Idle mode
-    PTCONbits.SEIEN = 0; // Special Event Interrupt is disabled
+    PTCONbits.SEIEN = 1; // Special Event Interrupt is enabled
     PTCONbits.EIPU = 0; // Active Period register updates occur on PWM cycle boundaries
     PTCONbits.SYNCPOL = 0; // SYNCI1/SYNCO1 is active-high
     PTCONbits.SYNCEN = 0; // SYNCO1 output is disabled
     PTCONbits.SYNCSRC = 0; // SYNCI 1 input from PPS
-    PTCONbits.SEVTPS = 0; // 1:1 Postscaler generates Special Event Trigger on every compare match event
+    PTCONbits.SEVTPS = 1; // 1:2 postscaler generates Special Event trigger at every second compare match event
 
     PTCON2bits.PCLKDIV = 0; // Divide by 1, maximum PWM timing resolution (power-on default)
 
     PTPER = PWM_PERIOD;
-    SEVTCMP = 0;
+    SEVTCMP = PWM_PERIOD;
+
+    IEC3bits.PSEMIE = 1; // Special Event Interrupt is enabled
+    IPC14bits.PSEMIP = 7; // Special Event Interrupt level 7
 
     PWM1_Initialize();
     PWM2_Initialize();
     PWM3_Initialize();
-
+    
     PTCONbits.PTEN = 1;
 }

@@ -16,9 +16,15 @@
 #define convert_current(x) _Q16mpy(x * 65536L,3932L) - 2027188L - 1724L
 #define convert_current_scaled(x) _Q16mpy(convert_current(x),_Q16_1_DIV_MAX_CURRENT)
 
+volatile static struct PID_data d_current_pid;
+volatile static struct PID_data q_current_pid;
+    
 int main()
 {   
     SYSTEM_Initialize();
+    PDC1 = 0;
+    PDC2 = 0;
+    PDC3 = 0;
     
     // Initialize the LIN interface
     if (l_sys_init())
@@ -32,42 +38,70 @@ int main()
     // Set UART RX to interrupt level 5
     struct l_irqmask irqmask = { 5, 5 };
     l_sys_irq_restore(irqmask);
-
-    static struct PID_data d_current_pid;
-    static struct PID_data q_current_pid;
-
+   
     pid_setup(d_current_pid, _Q16_Kp, _Q16_Ki, _Q16_Kd);
     pid_setup(q_current_pid, _Q16_Kp, _Q16_Ki, _Q16_Kd);
-
+    
     while (1) {
+        
+    }
+
+    return -1;
+}
+
+struct l_irqmask l_sys_irq_disable()
+{
+    IEC0bits.U1RXIE = 0;
+    IEC0bits.U1TXIE = 0;
+    IFS0bits.U1TXIF = 0;
+    IFS0bits.U1RXIF = 0;
+    struct l_irqmask mask = { IPC2bits.U1RXIP, IPC3bits.U1TXIP };
+    return mask;
+}
+
+void l_sys_irq_restore(struct l_irqmask previous)
+{
+    IPC2bits.U1RXIP = previous.rx_level;
+    IFS0bits.U1TXIF = 0;
+    IEC0bits.U1RXIE = 1;
+
+    IPC3bits.U1TXIP = previous.tx_level;
+    IFS0bits.U1RXIF = 0;
+    IEC0bits.U1TXIE = 1;
+}
+
+void __attribute__((interrupt, auto_psv)) _PWMSpEventMatchInterrupt() {
+    if(IFS3bits.PSEMIF) {
         AD1CON1bits.SAMP = 1; // Start sampling
-        _Q16 in_theta = _Q16mpy(as5048a_read_angle() - 0x000051D6,458752UL); // Read the angle while waiting for the A/D sampling and conversion
+        
+        volatile _Q16 in_theta = _Q16mpy(as5048a_read_angle() - 0x000051D6,458752UL); // Read the angle while waiting for the A/D sampling and conversion
+        volatile _Q16 sin_theta = _Q16sin(in_theta);
+        volatile _Q16 cos_theta = _Q16cos(in_theta);
+        
         while (!AD1CON1bits.DONE); // Wait for the conversion to complete
         
         // TODO over current brakes things very very badly
-        _Q16 in_i_a = convert_current_scaled(ADC1BUF1);
-        _Q16 in_i_b = convert_current_scaled(ADC1BUF2);
-        _Q16 commanded_d_current = 0;
-        _Q16 commanded_q_current = saturate_positive_one(ADC1BUF3 * 76L);
+        volatile _Q16 in_i_a = convert_current_scaled(ADC1BUF1);
+        volatile _Q16 in_i_b = convert_current_scaled(ADC1BUF2);
+        volatile _Q16 commanded_d_current = 0;
+        volatile _Q16 commanded_q_current = saturate_positive_one(ADC1BUF3 * 76L);
+        
+        volatile _Q16 alpha = 0, beta = 0;
+        volatile _Q16 in_i_d = 0, in_i_q = 0;
+        
+        volatile _Q16 out_i_d = 0, out_i_q = 0;
+        volatile _Q16 out_i_a = 0, out_i_b = 0, out_i_c = 0;
+            
+        if(commanded_q_current > 655) {
+            clarke_transform(in_i_a, in_i_b, alpha, beta);
+            park_transform(alpha, beta, sin_theta, cos_theta, in_i_d, in_i_q);
 
-        _Q16 sin_theta = _Q16sin(in_theta);
-        _Q16 cos_theta = _Q16cos(in_theta);
+            pid_step(d_current_pid, in_i_d, 0, out_i_d);
+            pid_step(q_current_pid, in_i_q, commanded_q_current, out_i_q);
 
-        _Q16 alpha, beta;
-        clarke_transform(in_i_a, in_i_b, alpha, beta);
-
-        _Q16 in_i_d, in_i_q;
-        park_transform(alpha, beta, sin_theta, cos_theta, in_i_d, in_i_q);
-
-        _Q16 out_i_d , out_i_q;
-        pid_step(d_current_pid, in_i_d, 0, out_i_d);
-        pid_step(q_current_pid, in_i_q, commanded_q_current, out_i_q);
-
-        inverse_park_transform(out_i_d, out_i_q, sin_theta, cos_theta, alpha, beta);
-
-        _Q16 out_i_a, out_i_b, out_i_c;
-        inverse_clarke_transform(alpha, beta, out_i_a, out_i_b, out_i_c);
-
+            inverse_park_transform(out_i_d, out_i_q, sin_theta, cos_theta, alpha, beta);
+            inverse_clarke_transform(alpha, beta, out_i_a, out_i_b, out_i_c);
+        }
         write_space_vector_modulation(out_i_a, out_i_b, out_i_c);
         
         if(l_flg_tst_motor_controller_duty_cycle()) {
@@ -94,28 +128,7 @@ int main()
             l_flg_clr_q_axis_current();
             l_bytes_wr_q_axis_current(0,4,(l_u8 *)&in_i_q);
         }
+        
+        IFS3bits.PSEMIF = 0;
     }
-
-    return -1;
-}
-
-struct l_irqmask l_sys_irq_disable()
-{
-    IEC0bits.U1RXIE = 0;
-    IEC0bits.U1TXIE = 0;
-    IFS0bits.U1TXIF = 0;
-    IFS0bits.U1RXIF = 0;
-    struct l_irqmask mask = { IPC2bits.U1RXIP, IPC3bits.U1TXIP };
-    return mask;
-}
-
-void l_sys_irq_restore(struct l_irqmask previous)
-{
-    IPC2bits.U1RXIP = previous.rx_level;
-    IFS0bits.U1TXIF = 0;
-    IEC0bits.U1RXIE = 1;
-
-    IPC3bits.U1TXIP = previous.tx_level;
-    IFS0bits.U1RXIF = 0;
-    IEC0bits.U1TXIE = 1;
 }
