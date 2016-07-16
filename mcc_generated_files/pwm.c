@@ -133,7 +133,7 @@ void PWM_Initialize()
     PTCONbits.SYNCPOL = 0; // SYNCI1/SYNCO1 is active-high
     PTCONbits.SYNCEN = 0; // SYNCO1 output is disabled
     PTCONbits.SYNCSRC = 0; // SYNCI 1 input from PPS
-    PTCONbits.SEVTPS = 1; // 1:2 postscaler generates Special Event trigger at every second compare match event
+    PTCONbits.SEVTPS = 0; // 1:1 postscaler generates Special Event trigger at every compare match event
 
     PTCON2bits.PCLKDIV = 0; // Divide by 1, maximum PWM timing resolution (power-on default)
 

@@ -7,11 +7,11 @@
 #include "pid.h"
 #include "space_vector_modulation.h"
 
-#define _Q16_Kp 0//65536L
-#define _Q16_Ki 0//65536L
-#define _Q16_Kd 0//65536L
+#define _Q16_Kp 115000L
+#define _Q16_Ki 0L//65536L
+#define _Q16_Kd 0L//65536L
 
-#define _Q16_1_DIV_MAX_CURRENT 6553L // 1/10 A
+#define _Q16_1_DIV_MAX_CURRENT 655L // 1/10 A
 
 #define convert_current(x) _Q16mpy(x * 65536L,3932L) - 2027188L - 1724L
 #define convert_current_scaled(x) _Q16mpy(convert_current(x),_Q16_1_DIV_MAX_CURRENT)
@@ -21,6 +21,9 @@ volatile static struct PID_data q_current_pid;
     
 int main()
 {   
+    pid_setup(d_current_pid, _Q16_Kp, _Q16_Ki, _Q16_Kd);
+    pid_setup(q_current_pid, _Q16_Kp, _Q16_Ki, _Q16_Kd);
+    
     SYSTEM_Initialize();
     PDC1 = 0;
     PDC2 = 0;
@@ -38,9 +41,6 @@ int main()
     // Set UART RX to interrupt level 5
     struct l_irqmask irqmask = { 5, 5 };
     l_sys_irq_restore(irqmask);
-   
-    pid_setup(d_current_pid, _Q16_Kp, _Q16_Ki, _Q16_Kd);
-    pid_setup(q_current_pid, _Q16_Kp, _Q16_Ki, _Q16_Kd);
     
     while (1) {
         
@@ -75,7 +75,7 @@ void __attribute__((interrupt, auto_psv)) _PWMSpEventMatchInterrupt() {
             clarke_transform(in_i_a, in_i_b, alpha, beta);
             park_transform(alpha, beta, sin_theta, cos_theta, in_i_d, in_i_q);
 
-            pid_step(d_current_pid, in_i_d, 0, out_i_d);
+            pid_step(d_current_pid, in_i_d, commanded_d_current, out_i_d);
             pid_step(q_current_pid, in_i_q, commanded_q_current, out_i_q);
 
             inverse_park_transform(out_i_d, out_i_q, sin_theta, cos_theta, alpha, beta);
