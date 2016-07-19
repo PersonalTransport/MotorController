@@ -30,44 +30,12 @@ int main()
     return -1;
 }
 
-#define _Q16_2_PI 411775L
-
-static _Q16 wrap(_Q16 angle) {
-    while (angle > _Q16_2_PI)
-        angle -= _Q16_2_PI;
-    while (angle < 0)
-        angle += _Q16_2_PI;
-    return angle;
-}
-
-volatile unsigned long long count = 0;
-volatile _Q16 offset;
-
-#define A_COUNT (PWM_PERIOD>>2)
-
 void __attribute__((interrupt, auto_psv)) _PWMSpEventMatchInterrupt() {
     if(IFS3bits.PSEMIF) {
         IFS3bits.PSEMIF = 0;
         AD1CON1bits.SAMP = 1; // Start sampling
         
-        volatile _Q16 in = as5048a_read_angle();
-        
-        if(count < A_COUNT) {
-            count++;
-            PDC1 = A_COUNT-count;
-            PDC2 = 0;
-            PDC3 = 0;
-            offset = in + 70;
-            return;
-        }
-        else {
-            PDC1 = 0;
-            PDC2 = 0;
-            PDC3 = 0;
-        }
-        
-        volatile _Q16 in_theta = _Q16mpy(in - offset,-458752UL) + 137258L; // Read the angle while waiting for the A/D sampling and conversion
-        
+        volatile _Q16 in_theta = _Q16mpy(as5048a_read_angle(),-458752UL) + 137258L; // Read the angle while waiting for the A/D sampling and conversion
         in_theta = wrap(in_theta);
         
         while (!AD1CON1bits.DONE); // Wait for the conversion to complete
